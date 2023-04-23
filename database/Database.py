@@ -1,13 +1,23 @@
 ﻿import funct
+import datetime
 
-# Вставка нового повідомлення(текст, id користувача, ім'я користувача, id каналу, id месенджеру)
-#funct.Insert_messenge("Нормально", "U042ZHT1Q5S", "Михайло", "C082THNA1UE", 1) 
+text = 'Я тут'
+messenger_user_id = 'hjgvhgf'
+data_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+messenger_channel_id = '4636263'
+check_group = True
+messenger = 'slack'
+name_messenger_user = 'Григорій'
 
-# видалення певного тексту(текст, id користувача, id каналу)
-#funct.Delete_messenge("Привіт!", "U042CHT1Q5S", "C082THNA1UE")
+Check1 = funct.Check_channel(messenger_channel_id)
+if not Check1:
+    funct.Insert_channel(messenger_channel_id, messenger, messenger_user_id, check_group)
+Check2 = funct.Check_user(messenger_user_id)
+if not Check2:
+    funct.Insert_user(messenger_user_id, name_messenger_user, messenger_channel_id, check_group)
+print (Check1)
+print (Check2)
 
-#історія(id каналу) - надає данні, про історію в text та про id месенджеру в messenger
-#text, id_messenger = funct.history("C052GHNA0UE")
-#print(text)
-#messenger = int(id_messenger[0][0])
-#print(messenger)
+print(funct.history(messenger_channel_id))
+
+# funct.Delete_all_messenges(messenger_channel_id)

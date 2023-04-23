@@ -1,185 +1,188 @@
 ﻿import psycopg2
 
-
-
-def Insert_messenge(text, id_user_message, name_user, id_channel_message, messenger):
-   
-    
+# Створює нове повідомлення
+def Insert_messenge(text, messenger_user_id, data_time, messenger_channel_id, check_group):
     try:
         # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
         conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
         cur = conn.cursor()
-        id_user = Check_user(id_user_message, name_user, messenger)
-        id_channel = Check_channel(id_channel_message, messenger)
 
         # Виконання запиту для вставки повідомлення до таблиці бази даних
-        cur.execute('''INSERT INTO message (Text, Id_channel, Id_user) VALUES (%s, %s, %s)''', ( text, id_channel, id_user))
+        cur.execute('''INSERT INTO Messages (text, date_time, user_id)
+                       SELECT %s, %s, user_id FROM Users
+                       WHERE messenger_user_id = %s RETURNING message_id;''', ( text, data_time, messenger_user_id))
+        conn.commit()
+        if check_group:
+            message_id = cur.fetchone()[0]
+            cur.execute('''INSERT INTO Group_messages (message_id, channel_id)
+                           SELECT %s, channel_id FROM channels
+                           WHERE messenger_channel_id = %s;''', ( message_id, messenger_channel_id))
         conn.commit()
         cur.close()
         conn.close()
     except psycopg2.Error as e:
         print(f"Error: {e}")
-      
-    
-
-def Check_user(id_user_message, name_user, messenger):
-    # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-    cur.execute('''SELECT id_user FROM users WHERE id_user_message = %s''', (id_user_message,))
-    result = cur.fetchall()
-    if result:
+   
+        
+# Перевіряє чи існує канал 
+def Check_channel(messenger_channel_id):
+    try:   
+        # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute('''SELECT * FROM channels WHERE messenger_channel_id = %s''', ( messenger_channel_id,))
+        result = cur.fetchall()
+        if result:
+            check = True
+        else:
+            check = False
         cur.close()
         conn.close()
-        return result[0]
-    else:
+        return check #повертає булеву змінну. True якщо є, а False якщо немає такого каналу
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
+
+# Перевіряє чи існує користувач
+def Check_user(messenger_user_id):
+    try:    
+        # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute('''SELECT * FROM users WHERE messenger_user_id = %s''', (messenger_user_id,))
+        result = cur.fetchall()
+        if result:
+            check = True
+        else:
+            check = False
         cur.close()
         conn.close()
-        return Insert_user(id_user_message,name_user, messenger)
+        return check #повертає булеву змінну. True якщо є, а False якщо немає такого користувача
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
 
-def Insert_user(id_user_message, name_user, messenger):
-    # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-    cur.execute('''INSERT INTO users (Id_user_message, Name_user, Id_messenger) VALUES (%s, %s, %s) RETURNING Id_user;''', (id_user_message, name_user, messenger))
-    conn.commit()
-    result = cur.fetchall()[0]
-    cur.close()
-    conn.close()
-    return result
-
-def Check_channel(id_channel_message, messenger):
-    # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-    cur.execute('''SELECT id_channel FROM channels WHERE id_channel_message = %s''', ( id_channel_message,))
-    result = cur.fetchall()
-    if result:
+# створення нового каналу
+def Insert_channel(messenger_channel_id, messenger, messenger_user_id, check_group):
+    try:    
+        # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        if check_group:
+            cur.execute('''INSERT INTO channels (messenger_channel_id, messenger) VALUES (%s, %s);''', ( messenger_channel_id, messenger))
+        else:
+            cur.execute('''INSERT INTO channels (messenger_channel_id, messenger) VALUES (%s, %s) RETURNING channel_id;''', ( messenger_channel_id, messenger))
+            conn.commit()
+            channel_id = cur.fetchone()[0]
+            check = Check_user(messenger_user_id)
+            if check:
+                cur.execute('''UPDATE Users SET channel_id = %s WHERE messenger_user_id = %s;''', ( channel_id, messenger_user_id))
+        conn.commit()
         cur.close()
         conn.close()
-        return result[0]
-    else:
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
+
+# створення нового користувача (Якщо це особисті, то спочатку потрібно створити новий канал для цього користувача) 
+def Insert_user(messenger_user_id, name_messenger_user, messenger_channel_id, check_group):
+    try:   
+        # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        if check_group:
+            cur.execute('''INSERT INTO users (messenger_user_id, name_messenger_user) VALUES (%s, %s);''', (messenger_user_id, name_messenger_user))
+        else:
+            cur.execute('''INSERT INTO users (messenger_user_id, name_messenger_user, channel_id) 
+                           SELECT %s, %s,  channel_id FROM channels
+                           WHERE messenger_channel_id = %s;''', (messenger_user_id, name_messenger_user, messenger_channel_id))
+        conn.commit()
         cur.close()
         conn.close()
-        return Insert_channel(id_channel_message, messenger)
-
-def Insert_channel(id_channel_message, messenger):
-    # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-    cur.execute('''INSERT INTO channels (Id_channel_message, Id_messenger) VALUES (%s, %s) RETURNING Id_channel;''', ( id_channel_message, messenger))
-    conn.commit()
-    result = cur.fetchall()[0]
-    cur.close()
-    conn.close()
-    return result
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
 
 
-
-def Delete_messenge(text, id_user_message, id_channel_message):
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-    
+# видаляє повідомлення за текстом, id користувача та id каналу
+def Delete_messenge(text, messenger_user_id, messenger_channel_id):
     try:
-        cur.execute('''DELETE FROM message
-                       USING users, channels
-                       WHERE users.Id_user = message.Id_user
-                       AND channels.Id_channel = message.Id_channel
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute('''DELETE FROM messages
+                       USING users, channels, group_messages
+                       WHERE (users.user_id = messages.user_id
+                       AND channels.channel_id = users.channel_id
                        AND text = %s
-                       AND channels.Id_channel_message = %s
-                       AND users.Id_user_message = %s;''', (text , id_channel_message, id_user_message))
+                       AND channels.messenger_channel_id = %s
+                       AND users.messenger_user_id = %s)
+                       OR (users.user_id = messages.user_id
+                       AND channels.channel_id = group_messages.channel_id
+                       AND group_messages.message_id = messages.message_id
+                       AND text = %s
+                       AND channels.messenger_channel_id = %s
+                       AND users.messenger_user_id = %s);''', (text , messenger_channel_id, messenger_user_id, text , messenger_channel_id, messenger_user_id))
         conn.commit()
-
+        cur.close()
+        conn.close()
     except psycopg2.Error as e:
         print(f"Error: {e}")
 
-    cur.close()
-    conn.close()
-
-
-
-def history(id_channel_message):
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
     
+
+# видаляє всі повідомлення з каналу
+def Delete_all_messenges(messenger_channel_id):
     try:
-        
-        cur.execute('''SELECT name_user, text 
-                        FROM users
-                        JOIN message ON users.Id_user = message.Id_user
-                        JOIN channels ON message.Id_channel = channels.Id_channel
-                        WHERE channels.Id_channel_message = %s;''', (id_channel_message,))
-        rows = cur.fetchall()
-        data = []
-        for row in rows:
-            data.append(f"{row[0]}: {row[1]}")
-        
-        result = "\n".join(data)
-
-        cur.execute('''SELECT messenger.id_messenger 
-                       FROM messenger INNER JOIN channels ON messenger.id_messenger = channels.id_messenger
-                       WHERE channels.id_channel_message = %s''', (id_channel_message,))
-        id_messenger = cur.fetchall()
-        return result, id_messenger
-
-
-    except psycopg2.Error as e:
-        print(f"Error: {e}")
-
-    cur.close()
-    conn.close()
-
-
-
-def Insert_messenge2(text, id_user_message, name_user, id_channel_message, messenger):
-
-    # Підключення до бази даних (Назва, користувач, пароль, хост, порт)
-    conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
-    cur = conn.cursor()
-
-    try:
-        # Виконання запиту для вставки повідомлення до таблиці бази даних
-        cur.execute('''WITH 
-                         new_channel AS (
-                           INSERT INTO channels (Id_channel_message, Id_messenger)
-                           SELECT %(id_channel_message)s, %(id_messenger)s
-                           WHERE NOT EXISTS (
-                             SELECT 1 FROM channels WHERE Id_channel_message = %(id_channel_message)s
-                           )
-                           RETURNING Id_channel
-                         ),
-                         new_user AS (
-                           INSERT INTO users (Id_user_message, Name_user, Id_messenger)
-                           SELECT %(id_user_message)s, %(name_user)s, %(id_messenger)s
-                           WHERE NOT EXISTS (
-                             SELECT 1 FROM users WHERE Id_user_message = %(id_user_message)s
-                           )
-                           RETURNING Id_user
-                         )
-                       INSERT INTO message (Text, Id_channel, Id_user)
-                       SELECT 
-                         %(text)s, 
-                         COALESCE(
-                           (SELECT Id_channel FROM channels WHERE Id_channel_message = %(id_channel_message)s),
-                           (SELECT Id_channel FROM new_channel)
-                         ),
-                         COALESCE(
-                           (SELECT Id_user FROM users WHERE Id_user_message = %(id_user_message)s),
-                           (SELECT Id_user FROM new_user)
-                         )''', {
-                                   'text': text,
-                                   'id_channel_message': id_channel_message,
-                                   'id_user_message': id_user_message,
-                                   'name_user': name_user,
-                                   'id_messenger': messenger
-                               })
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute('''DELETE FROM messages
+                       USING users, channels, group_messages
+                       WHERE (users.user_id = messages.user_id
+                       AND channels.channel_id = users.channel_id
+                       AND channels.messenger_channel_id = %s)
+                       OR (users.user_id = messages.user_id
+                       AND channels.channel_id = group_messages.channel_id
+                       AND group_messages.message_id = messages.message_id
+                       AND channels.messenger_channel_id = %s);''', (messenger_channel_id, messenger_channel_id))
         conn.commit()
-
+        cur.close()
+        conn.close()
     except psycopg2.Error as e:
         print(f"Error: {e}")
-      
-    cur.close()
-    conn.close()
+
+    
+
+# виводить історію каналу
+def history(messenger_channel_id):
+    try:
+        conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon2003", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute('''SELECT u.Name_messenger_user , m.text
+                       FROM Messages m
+                       INNER JOIN Users u ON m.user_id = u.user_id
+                       INNER JOIN Channels c ON u.channel_id = c.channel_id
+                       WHERE c.messenger_channel_id = %s
+                       UNION
+                       SELECT u.Name_messenger_user , m.text
+                       FROM Messages m
+                       INNER JOIN Group_messages gm ON m.message_id = gm.message_id
+                       INNER JOIN Channels c ON gm.channel_id = c.channel_id
+                       INNER JOIN Users u ON m.user_id = u.user_id
+                       WHERE c.messenger_channel_id = %s;''', (messenger_channel_id, messenger_channel_id))
+        rows = cur.fetchall()
+        text = []
+        for row in rows:
+            text.append(f"{row[0]}: {row[1]}")
+
+        cur.execute('''SELECT messenger 
+                       FROM channels
+                       WHERE messenger_channel_id = %s''', (messenger_channel_id,))
+        messenger = cur.fetchall()[0]
+        cur.close()
+        conn.close()
+        return text, messenger # повертає оброблений текст історії та назву месенджеру
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
+    
+
+
+
 
 
     

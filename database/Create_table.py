@@ -5,33 +5,39 @@ conn = psycopg2.connect(database="filonchuk", user="postgres", password="Filon20
 cur = conn.cursor()
 
 # Створення таблиці Text
-cur.execute("""
-    CREATE TABLE messenger (
-        Id_messenger SERIAL PRIMARY KEY,
-        Name_messenger VARCHAR(15)
+cur.execute("""    
+    CREATE TABLE Channels (
+        channel_id SERIAL PRIMARY KEY,
+        messenger_channel_id VARCHAR(15) NOT NULL,
+        messenger VARCHAR(20) NOT NULL
     );
     
-    CREATE TABLE users (
-        Id_user SERIAL PRIMARY KEY,
-        Id_user_message VARCHAR(15),
-        Name_user VARCHAR(50),
-        Id_messenger INT REFERENCES messenger(Id_messenger)
+    CREATE TABLE Person (
+        person_id SERIAL PRIMARY KEY,
+        First_name VARCHAR(20) NOT NULL,
+        Last_name VARCHAR(20) NOT NULL
     );
     
-    CREATE TABLE channels (
-        Id_channel SERIAL PRIMARY KEY,
-        Id_channel_message VARCHAR(15)
-        Id_messenger INT REFERENCES messenger(Id_messenger)
+    CREATE TABLE Users (
+        user_id SERIAL PRIMARY KEY,
+        person_id INTEGER REFERENCES person(person_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        messenger_user_id VARCHAR(15) NOT NULL,
+        Name_messenger_user VARCHAR(50) NOT NULL,
+        channel_id INTEGER REFERENCES Channels(channel_id) ON UPDATE CASCADE ON DELETE CASCADE
     );
     
-    CREATE TABLE message (
-        Id_message SERIAL PRIMARY KEY,
-        Text TEXT,
-        Id_user INT REFERENCES users(Id_user),
-        Id_channel INT REFERENCES channels(Id_channel)
+    CREATE TABLE Messages (
+        message_id SERIAL PRIMARY KEY,
+        text TEXT NOT NULL,
+        date_time TIMESTAMP NOT NULL,
+        user_id INTEGER REFERENCES Users(user_id) ON UPDATE CASCADE ON DELETE CASCADE
     );
-
-    INSERT INTO messenger (name_messenger) VALUES ('Telegram', 'Slack');
+    
+    CREATE TABLE Group_messages (
+        group_message_id SERIAL PRIMARY KEY,
+        channel_id INTEGER  NOT NULL REFERENCES Channels(channel_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        message_id INTEGER NOT NULL REFERENCES Messages(message_id) ON UPDATE CASCADE ON DELETE CASCADE
+    );
 """)
 conn.commit()
 
