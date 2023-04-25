@@ -1,23 +1,39 @@
 ﻿import funct
 import datetime
 
-text = 'Я тут'
-messenger_user_id = 'hjgvhgf'
+# задамо параметри
+text = 'Вітання'
+messenger_user_id = 'іфолвптіл'
 data_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-messenger_channel_id = '4636263'
-check_group = True
-messenger = 'slack'
-name_messenger_user = 'Григорій'
+messenger_channel_id = 'лотчалм'
+channel_type = 'Public'
+messenger = 2
+name_messenger_user = 'Юрій'
 
-Check1 = funct.Check_channel(messenger_channel_id)
+# перевірка та вставка юзера
+Check1 = funct.Check_user(messenger_user_id)
 if not Check1:
-    funct.Insert_channel(messenger_channel_id, messenger, messenger_user_id, check_group)
-Check2 = funct.Check_user(messenger_user_id)
+    funct.Insert_user(messenger_user_id, name_messenger_user)
+
+# перевірка та вставка юзера з каналом
+Check2 = funct.Check_user_channel(messenger_user_id, messenger_channel_id)
 if not Check2:
-    funct.Insert_user(messenger_user_id, name_messenger_user, messenger_channel_id, check_group)
+    funct.Insert_user_channel(messenger_user_id, messenger_channel_id, channel_type, messenger)
+
+# вивід для відображення результатів
 print (Check1)
 print (Check2)
 
-print(funct.history(messenger_channel_id))
+# вставка повідомлення
+funct.Insert_messenge(text, data_time, messenger_user_id, messenger_channel_id)
 
-# funct.Delete_all_messenges(messenger_channel_id)
+# історія
+result = funct.history(messenger_channel_id)
+# вивід для відображення результатів
+received_text = result[0]
+received_messenger = result[1]
+print(received_text)
+print(received_messenger)
+
+# видалення всіх повідомлень
+funct.Delete_all_messenges(messenger_channel_id)
