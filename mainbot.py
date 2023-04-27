@@ -1,17 +1,24 @@
-import sys
+#import sys
 
-from database import funct
-from datetime import datetime
+#from database import funct
+#from datetime import datetime
+import thirt
+import test
 
+def get_message(chat_id, text, messenger):
+    thirt.echo(chat_id, text, messenger)
 
-class Message:
-    def __init__(self, text, user_id, user_name, chat_id, platform, is_it_group):
-        self.user_id = user_id
-        self.user_name = user_name
-        self.chat_id = chat_id
-        self.text = text
-        self.platform = platform
-        self.is_it_group = is_it_group
+def send_message(chat_id, text, messenger):
+    test.send(chat_id, text)
+
+# class Message:
+#     def __init__(self, text, user_id, user_name, chat_id, platform, is_it_group):
+#         self.user_id = user_id
+#         self.user_name = user_name
+#         self.chat_id = chat_id
+#         self.text = text
+#         self.platform = platform
+#         self.is_it_group = is_it_group
 
 
 # def get_message(cls):
@@ -25,11 +32,7 @@ class Message:
 #     )
 #     send_message(cls)
 
-def get_message(chat_id, text, messenger):
-    thirt.echo(chat_id, text, messenger)
 
-def send_message(chat_id, text, messenger):
-    BotCode.set_message(chat_id, text)
 
 
 # def send_message(cls):
